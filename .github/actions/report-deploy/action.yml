@@ -10,6 +10,7 @@ inputs:
   environment:    { description: "Deploy environment (prod, uat, ...)", required: true }
   status:         { description: "job.status of the deploy job (success or failure)", required: true }
   version:        { description: "Released version. Defaults to the short commit SHA", required: false, default: "" }
+  finished-at:    { description: "When the deploy ended (ISO 8601, UTC). Defaults to now", required: false, default: "" }
   rollback:       { description: "true when this run redeploys an older version on purpose", required: false, default: "false" }
   coralogix-logs-url: { description: "Coralogix REST logs endpoint for your region", required: false, default: "https://ingress.us2.coralogix.com/logs/v1/singles" }
   coralogix-api-key:  { description: "Coralogix Send-Your-Data API key (from a secret)", required: true }
@@ -20,7 +21,11 @@ runs:
   using: composite
   steps:
     - shell: bash
-      run: bash "${{ github.action_path }}/report-deploy.sh"
+      # Reporting never fails the pipeline: on any error it logs a warning and the deploy result stands.
+      run: |
+        if ! bash "${{ github.action_path }}/report-deploy.sh"; then
+          echo "::warning::Deploy report to Coralogix failed. The deploy itself is not affected."
+        fi
       env:
         SERVICE: ${{ inputs.service }}
         TEAM: ${{ inputs.team }}
@@ -28,6 +33,7 @@ runs:
         DEPLOY_ENV: ${{ inputs.environment }}
         DEPLOY_STATUS: ${{ inputs.status }}
         VERSION: ${{ inputs.version }}
+        DEPLOY_FINISHED_AT: ${{ inputs.finished-at }}
         ROLLBACK: ${{ inputs.rollback }}
         CX_LOGS_URL: ${{ inputs.coralogix-logs-url }}
         CX_API_KEY: ${{ inputs.coralogix-api-key }}

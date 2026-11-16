@@ -8,7 +8,7 @@
 #   CX_LOGS_URL      e.g. https://ingress.us2.coralogix.com/logs/v1/singles
 #   CX_API_KEY       Coralogix Send-Your-Data API key
 # Optional env:
-#   VERSION (default: short SHA), DEPLOY_STARTED_AT (ISO 8601, default: run start),
+#   VERSION (default: short SHA), DEPLOY_STARTED_AT (ISO 8601, default: run start), DEPLOY_FINISHED_AT (default: now),
 #   ROLLBACK (true|false, default false), PREVIOUS_SHA (override the deploy-tag lookup),
 #   CX_APPLICATION (default cicd),
 #   CX_OPS_EVENTS_URL + CX_OPS_EVENTS_KEY (OpsEvents preset) to also send an APM deployment marker,
@@ -24,7 +24,7 @@ VERSION="${VERSION:-${SHA:0:12}}"
 APP="${CX_APPLICATION:-cicd}"
 SUB="${CX_SUBSYSTEM:-deployments}"
 ROLLBACK="${ROLLBACK:-false}"
-NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+NOW="${DEPLOY_FINISHED_AT:-$(date -u +%Y-%m-%dT%H:%M:%SZ)}"   # deploy end; the deploy job passes it when the report runs as a later job
 TAG="deploy/${DEPLOY_ENV}/${SERVICE}"
 RUN_URL="${GITHUB_SERVER_URL:-https://github.com}/${REPO}/actions/runs/${GITHUB_RUN_ID:-0}"
 
