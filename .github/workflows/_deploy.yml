@@ -19,6 +19,9 @@ jobs:
   deploy:
     runs-on: ubuntu-latest   # Cardlytics: your ARC scale set label
     environment: ${{ inputs.environment }}   # prod has a required reviewer, which is the approval gate
+    # One pending deploy per service and env: a newer merge replaces an older run still waiting at the gate,
+    # so the approved deploy carries every merged PR and nothing deploys an older commit afterwards.
+    concurrency: { group: "deploy-${{ inputs.environment }}-${{ inputs.service }}", cancel-in-progress: false }
     steps:
       - uses: actions/checkout@v4
       - name: Deploy (lab stand-in for helm upgrade / serverless deploy / Onehouse job release)
