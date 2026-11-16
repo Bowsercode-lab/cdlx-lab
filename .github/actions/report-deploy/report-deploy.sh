@@ -70,6 +70,12 @@ else
   COMMITS="$(gh_api "/repos/${REPO}/commits/${SHA}" | jq -c '[{sha, date: .commit.author.date, message: (.commit.message | split("\n")[0]),
               ai_trailer: ((.commit.message | test("(?i)co-authored-by:.*(claude|copilot|cursor|codex|devin|openai)")))}]')"
 fi
+# Monorepo: keep only commits that touch this project's folder, so another project's PRs (and repo-wide
+# commits such as workflow edits) never count toward this service's batch size or change records.
+if [[ -n "${PROJECT_PATH:-}" && "$COMPARE_STATUS" =~ ^(ahead|diverged)$ ]]; then
+  PATH_SHAS="$(gh_api "/repos/${REPO}/commits?sha=${SHA}&path=${PROJECT_PATH}&per_page=100" | jq -c '[.[] | select((.parents | length) == 1) | .sha]')"   # authored commits, not merge commits
+  COMMITS="$(jq -c --argjson keep "$PATH_SHAS" '[.[] | select(.sha as $s | $keep | index($s))]' <<<"$COMMITS")"
+fi
 # A deploy of an older commit than the last one is a rollback even if nobody said so.
 [[ "$COMPARE_STATUS" == "behind" ]] && ROLLBACK=true
 
