@@ -1,0 +1,14 @@
+# Lab only: a release workflow named like Cardlytics' "CDLX Release" runs ("Release <service>").
+name: Release
+run-name: "Release ${{ inputs.service }}"
+on:
+  workflow_dispatch:
+    inputs:
+      service: { description: "Service to release", default: "aura-api" }
+permissions:
+  contents: read
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Releasing ${{ inputs.service }}"

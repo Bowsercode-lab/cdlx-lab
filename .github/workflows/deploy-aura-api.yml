@@ -1,4 +1,5 @@
 name: Deploy aura-api
+run-name: "Deploy services/aura-api → prod"   # Cardlytics-style run title: carries the folder
 on:
   push:
     branches: [main]

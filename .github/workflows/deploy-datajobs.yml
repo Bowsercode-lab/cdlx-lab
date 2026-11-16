@@ -1,4 +1,5 @@
 name: Deploy cdp-datapipeline-curation
+run-name: "Deploy data/jobs → prod"   # Cardlytics-style run title: carries the folder
 on:
   push:
     branches: [main]

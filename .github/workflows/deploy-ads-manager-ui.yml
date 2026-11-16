@@ -1,4 +1,5 @@
 name: Deploy ads-manager-ui
+run-name: "Deploy apps/ads-manager-ui → prod"   # Cardlytics-style run title: carries the folder
 on:
   push:
     branches: [main]
