@@ -120,7 +120,14 @@ if [[ "$ROLLBACK" == true || "$REVERT" == true || "$HOTFIX" == true ]]; then
   [[ -n "$PREV_FINISHED_AT" ]] && RECOVERY_SECONDS="$(secs_between "$PREV_FINISHED_AT" "$NOW")"
 fi
 
+# The Coralogix "Dora Metrics" extension reads GitHub workflow_run-shaped fields under $d.github and counts every
+# completed run as a deployment. Give the deployment record (only) that shape so the extension and the custom
+# dashboards read the same source. Lead time starts at the first commit of the earliest PR in the deploy.
+LEAD_FROM="$(jq -r '[.[].first_commit_at | select(. != null and . != "")] | min // empty' <<<"$CHANGES")"
+[[ -z "$LEAD_FROM" ]] && LEAD_FROM="$(gh_api "/repos/${REPO}/commits/${SHA}" | jq -r '.commit.author.date // empty' || true)"
+
 DEPLOY="$(jq -n --arg service "$SERVICE" --arg team "$TEAM" --arg project_path "$PROJECT_PATH" --arg env "$DEPLOY_ENV" \
+  --arg lead_from "$LEAD_FROM" \
   --arg version "$VERSION" --arg sha "$SHA" --arg repo "$REPO" --arg run_url "$RUN_URL" --arg outcome "$DEPLOY_STATUS" \
   --arg started_at "$DEPLOY_STARTED_AT" --arg finished_at "$NOW" --arg previous_sha "$PREV_SHA" --arg compare "$COMPARE_STATUS" \
   --argjson rollback "$ROLLBACK" --argjson revert "$REVERT" --argjson hotfix "$HOTFIX" --argjson remediation "$REMEDIATION" \
@@ -132,7 +139,12 @@ DEPLOY="$(jq -n --arg service "$SERVICE" --arg team "$TEAM" --arg project_path "
            ai_assisted_commits: ([$commits[] | select(.ai_trailer)] | length),
            rollback: $rollback, revert: $revert, hotfix: $hotfix,
            remediation: $remediation, remediates_sha: (if $remediation then $previous_sha else null end),
-           recovery_seconds: $recovery_seconds}}')"
+           recovery_seconds: $recovery_seconds},
+   github: {repository: {name: ($repo | split("/")[1])},
+            workflow_run: {status: "completed", conclusion: (if $outcome == "success" then "success" else "failure" end),
+                           head_commit: {timestamp: (if $lead_from == "" then null else $lead_from end)},
+                           repository: {name: ($repo | split("/")[1])},
+                           name: $service, html_url: $run_url, head_sha: $sha}}}')"
 
 # One change record per PR so lead time and its stage breakdown are plain per-row fields.
 RECORDS="$(jq -c --argjson d "$DEPLOY" --argjson changes "$CHANGES" -n '
