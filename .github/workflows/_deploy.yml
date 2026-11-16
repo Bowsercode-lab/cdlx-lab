@@ -1,0 +1,41 @@
+# Reusable deploy workflow. Every service deploy calls this, so every deploy reports exactly once.
+name: _deploy
+on:
+  workflow_call:
+    inputs:
+      service:      { type: string, required: true }
+      team:         { type: string, required: true }
+      project-path: { type: string, required: true }
+      environment:  { type: string, required: true }
+      rollback:     { type: boolean, required: false, default: false }
+    secrets:
+      CORALOGIX_SEND_YOUR_DATA_KEY: { required: true }
+      CORALOGIX_OPS_EVENTS_KEY: { required: false }
+permissions:
+  contents: write        # move the deploy/<env>/<service> tag
+  pull-requests: read
+  actions: read
+jobs:
+  deploy:
+    runs-on: ubuntu-latest   # Cardlytics: your ARC scale set label
+    environment: ${{ inputs.environment }}   # prod has a required reviewer, which is the approval gate
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy (lab stand-in for helm upgrade / serverless deploy / Onehouse job release)
+        run: |
+          echo "Deploying ${{ inputs.service }} $(cat ${{ inputs.project-path }}/VERSION)"
+          sleep $((RANDOM % 30 + 10))
+          if [ -f "${{ inputs.project-path }}/FAIL_DEPLOY" ]; then echo "simulated deploy failure"; exit 1; fi
+      - name: Report deployment to Coralogix
+        if: always()
+        uses: ./.github/actions/report-deploy
+        with:
+          service: ${{ inputs.service }}
+          team: ${{ inputs.team }}
+          project-path: ${{ inputs.project-path }}
+          environment: ${{ inputs.environment }}
+          status: ${{ job.status }}
+          rollback: ${{ inputs.rollback }}
+          coralogix-api-key: ${{ secrets.CORALOGIX_SEND_YOUR_DATA_KEY }}
+          coralogix-ops-events-key: ${{ secrets.CORALOGIX_OPS_EVENTS_KEY }}
+          github-token: ${{ github.token }}
