@@ -1,0 +1,13 @@
+name: CI aura-api
+on:
+  pull_request:
+    paths: ["services/aura-api/**"]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unit tests (lab stand-in; FLAKY makes about 1 in 4 runs fail so restarts-to-pass shows up)
+        run: |
+          sleep $((RANDOM % 20 + 5))
+          if [ -f "services/aura-api/FLAKY" ] && [ $((RANDOM % 4)) -eq 0 ]; then echo "flaky failure"; exit 1; fi
