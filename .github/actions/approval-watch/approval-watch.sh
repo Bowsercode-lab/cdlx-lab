@@ -13,14 +13,16 @@ RECORDS="[]"
 for run in $(gh_api "/repos/${REPO}/actions/runs?status=waiting&per_page=100" | jq -r '.workflow_runs[].id'); do
   r="$(gh_api "/repos/${REPO}/actions/runs/${run}")"
   envs="$(gh_api "/repos/${REPO}/actions/runs/${run}/pending_deployments" | jq -c '[.[].environment.name]')"
-  for job in $(gh_api "/repos/${REPO}/actions/runs/${run}/jobs?filter=latest" | jq -c '.jobs[] | select(.status == "waiting") | {name, created_at}'); do
+  # One JSON object per line; read line by line because job names contain spaces ("deploy / deploy").
+  while IFS= read -r job; do
+    [[ -z "$job" ]] && continue
     since="$(jq -r '.created_at' <<<"$job")"
     RECORDS="$(jq -c --argjson r "$r" --argjson job "$job" --argjson envs "$envs" --arg since "$since" \
       --argjson wait "$(( NOW_EPOCH - $(epoch "$since") ))" \
       '. + [{dora: {event_type: "approval_pending", repo: $r.repository.full_name, workflow: $r.name, job: $job.name,
               run_id: $r.id, run_url: $r.html_url, head_sha: $r.head_sha, environments: $envs,
               waiting_since: $since, wait_seconds: $wait, wait_hours: (($wait / 360 | floor) / 10)}}]' <<<"$RECORDS")"
-  done
+  done < <(gh_api "/repos/${REPO}/actions/runs/${run}/jobs?filter=latest" | jq -c '.jobs[] | select(.status == "waiting") | {name, created_at}')
 done
 
 echo "$(jq 'length' <<<"$RECORDS") job(s) waiting for approval."
