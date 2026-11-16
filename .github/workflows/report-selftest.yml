@@ -1,0 +1,21 @@
+# Lab only: prove a Coralogix error gives a warning, not a failed run.
+name: Report self-test (lab)
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Report to a broken Coralogix URL
+        uses: ./.github/actions/report-deploy
+        with:
+          service: selftest
+          team: lab
+          project-path: services/aura-api
+          environment: selftest
+          status: failure
+          coralogix-logs-url: https://ingress.us2.coralogix.com/logs/v1/does-not-exist
+          coralogix-api-key: not-a-real-key
+          github-token: ${{ github.token }}
