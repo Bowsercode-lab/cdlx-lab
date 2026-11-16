@@ -8,6 +8,8 @@ on:
       rollback: { type: boolean, default: false, description: "Redeploy an older commit on purpose" }
 jobs:
   deploy:
+    # A reusable workflow gets no more than its caller grants; org default tokens are read-only.
+    permissions: { contents: write, pull-requests: read, actions: read }
     uses: ./.github/workflows/_deploy.yml
     with:
       service: cdp-datapipeline-curation
