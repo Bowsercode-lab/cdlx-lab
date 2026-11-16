@@ -1,0 +1,18 @@
+name: Deploy cdp-datapipeline-curation
+on:
+  push:
+    branches: [main]
+    paths: ["data/jobs/**"]
+  workflow_dispatch:
+    inputs:
+      rollback: { type: boolean, default: false, description: "Redeploy an older commit on purpose" }
+jobs:
+  deploy:
+    uses: ./.github/workflows/_deploy.yml
+    with:
+      service: cdp-datapipeline-curation
+      team: dd-data_commerce_graph
+      project-path: data/jobs
+      environment: prod
+      rollback: ${{ inputs.rollback || false }}
+    secrets: inherit
