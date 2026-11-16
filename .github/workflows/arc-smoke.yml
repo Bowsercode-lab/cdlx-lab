@@ -1,0 +1,17 @@
+# Lab only: queue jobs on the ARC runner scale set "arc-lab" so the gha_* runner metrics move
+# (desired, busy, idle, startup duration). Manual trigger only: runners on a public repo must
+# never pick up pull request jobs.
+name: ARC smoke (lab)
+on:
+  workflow_dispatch:
+    inputs:
+      seconds: { description: "How long each job runs", default: "120" }
+permissions:
+  contents: read
+jobs:
+  work:
+    runs-on: arc-lab
+    strategy:
+      matrix: { n: [1, 2, 3, 4] }
+    steps:
+      - run: echo "job ${{ matrix.n }} on $RUNNER_NAME"; sleep "${{ inputs.seconds }}"
