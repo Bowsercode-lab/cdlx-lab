@@ -1,0 +1,26 @@
+# Lab only: replay the sample Datadog incident (declared, then resolved 2 hours later) to Coralogix.
+# Sends the sample as-is (text is a JSON string) and a second copy with text as a JSON object,
+# which is how the Datadog webhook payload in datadog/incident-webhook.md arrives.
+name: Incident replay (lab)
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Send sample incident (text as string, public_id 1042)
+        run: |
+          curl -fsS -X POST https://ingress.us2.coralogix.com/logs/v1/singles \
+            -H "Content-Type: application/json" -H "Authorization: Bearer ${CX_API_KEY}" \
+            --data-binary @datadog/sample-incident.json
+        env:
+          CX_API_KEY: ${{ secrets.CORALOGIX_SEND_YOUR_DATA_KEY }}
+      - name: Send the same incident with text as an object (public_id 1043, webhook shape)
+        run: |
+          jq '[.[] | .text |= (fromjson | .incident.public_id = "1043" | .incident.uuid = "lab-0002")]' datadog/sample-incident.json \
+          | curl -fsS -X POST https://ingress.us2.coralogix.com/logs/v1/singles \
+              -H "Content-Type: application/json" -H "Authorization: Bearer ${CX_API_KEY}" --data-binary @-
+        env:
+          CX_API_KEY: ${{ secrets.CORALOGIX_SEND_YOUR_DATA_KEY }}
