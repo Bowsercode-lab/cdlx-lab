@@ -1,0 +1,18 @@
+name: Deploy aura-api
+on:
+  push:
+    branches: [main]
+    paths: ["services/aura-api/**"]
+  workflow_dispatch:
+    inputs:
+      rollback: { type: boolean, default: false, description: "Redeploy an older commit on purpose" }
+jobs:
+  deploy:
+    uses: ./.github/workflows/_deploy.yml
+    with:
+      service: aura-api
+      team: dd-advertiser_backend
+      project-path: services/aura-api
+      environment: prod
+      rollback: ${{ inputs.rollback || false }}
+    secrets: inherit
